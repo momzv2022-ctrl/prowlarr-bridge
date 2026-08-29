@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="52" viewBox="0 0 400 52" role="img" aria-label="Set it up in your browser, free">
+  <!-- The README's one button. Cloudflare's orange, the same #f6821f the setup
+       page uses for the thing to press, drawn here rather than fetched from a
+       badge service so the README depends on nothing outside the repository. -->
+  <rect width="400" height="52" rx="8" fill="#f6821f"/>
+  <text x="200" y="32" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="600"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Set it up in your browser, free</text>
+</svg>

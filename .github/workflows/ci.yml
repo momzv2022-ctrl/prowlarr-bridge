@@ -1,0 +1,81 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # 20 is past end of life and tested anyway: it is the floor package.json
+      # promises, and a machine that already runs Prowlarr often has whatever
+      # Node it shipped with. 24 is what a new install gets. One file with no
+      # dependencies means no install step and no lockfile: `node --test` is
+      # the whole toolchain.
+      fail-fast: false
+      matrix:
+        node: ["20", "22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Tests (offline — Prowlarr is a table of fixtures)
+        run: node --test worker/tests/*.test.mjs
+
+      - name: The file starts, serves, and refuses without a key
+        # The other half of "one file, two runtimes": the Node entry is not
+        # exercised by the test suite, which imports the module rather than
+        # running it, so it gets started for real here.
+        run: |
+          BRIDGE_API_KEY=ci-key-long-enough-to-pass \
+          PROWLARR_URL=http://127.0.0.1:9 \
+          PROWLARR_APIKEY=ci-prowlarr-key \
+          BRIDGE_PORT=8788 node worker/src/worker.js &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8788/healthz >/dev/null 2>&1 && break; sleep 0.5; done
+          curl -fsS http://127.0.0.1:8788/healthz | tee /dev/stderr | grep -q '"status":"ok"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8788/api/v1/search?q=x')" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-API-Key: wrong-but-long-enough' \
+            'http://127.0.0.1:8788/api/v1/search?q=x')" = 403
+          kill %1
+
+      - name: The golden answer is committed, not generated on the fly
+        # UPDATE_GOLDEN=1 rewrites it. A run that changes it is a run where
+        # somebody forgot to look at the diff.
+        run: git diff --exit-code worker/tests/golden/
+
+      - name: The link encoder still matches lz-string
+        run: node worker/tools/playground-link.mjs --self-test
+
+  setup-page:
+    # The page is what a person who does not open a terminal actually uses, so
+    # it is opened in a real browser at five sizes. "Mobile-first" is a list of
+    # assertions, not an opinion; check-page.mjs has them. Plus one that is not
+    # about layout: the page must make no network request at all.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node worker/tools/build.mjs
+      # The runner already has Google Chrome. `test -x` is the important line:
+      # given no browser at all the checker prints "skipped" and exits 0, so
+      # without it a runner image that dropped Chrome would turn this job green
+      # while checking nothing.
+      - name: Point Playwright at the browser this runner already has
+        run: |
+          test -x /usr/bin/google-chrome
+          npm install --no-save --no-audit --no-fund playwright-core@1
+      - run: node worker/tools/check-page.mjs
+        env:
+          PLAYWRIGHT_CHROMIUM: /usr/bin/google-chrome
+

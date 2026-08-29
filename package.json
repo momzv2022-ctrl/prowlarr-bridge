@@ -1,0 +1,12 @@
+{
+  "name": "prowlarr-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Present so that Node reads worker.js as an ES module. No dependencies, no install step, no lockfile.",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test worker/tests/*.test.mjs",
+    "start": "node worker/src/worker.js"
+  }
+}

@@ -1,0 +1,92 @@
+name: pages
+
+# Publishes the setup page, which is the thing the README's button points at.
+#
+# Four files, and only one of them is interesting:
+#
+#   index.html         the page, with worker.js inlined so it can be copied
+#   worker.js          the artifact, byte-identical to worker/src/worker.js
+#   worker.js.sha256   so anyone can check that this is what CI published
+#   version.json       what it is and where it came from
+#
+# There is no compiler here. `site/worker.js` is a copy, which is what makes the
+# published SHA-256 worth publishing: it is the hash of a file you can read on
+# GitHub and compare for yourself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# One deployment at a time, and never cancel one half-done: a cancelled deploy
+# would leave the page serving a mixture of two versions, and the page's whole
+# claim is that its hash matches its file.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # First, on purpose. A repository where Pages has never been switched on
+      # fails here in five seconds rather than twenty seconds later, after the
+      # tests and the build have already run for nothing.
+      #
+      # This step cannot switch it on: creating a Pages site needs admin rights
+      # that GITHUB_TOKEN cannot be granted. It is one click, once:
+      #
+      #   Settings → Pages → Build and deployment → Source: GitHub Actions
+      #
+      # Until that is done, the page the README links to does not exist.
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: The artifact must ship with no settings in it
+        # build.mjs refuses too. This is the same check said out loud, because a
+        # Prowlarr key committed here by accident would be one person's Prowlarr
+        # handed to everybody who ever used the page.
+        run: |
+          grep -qx 'const BRIDGE_KEY = "";' worker/src/worker.js
+          grep -qx 'const PROWLARR = "";' worker/src/worker.js
+          grep -qx 'const PROWLARR_KEY = "";' worker/src/worker.js
+          grep -qx 'const SETUP_UNTIL = 0;' worker/src/worker.js
+
+      - name: Tests, before anything is published
+        run: node --test worker/tests/*.test.mjs
+
+      - name: Build
+        run: node worker/tools/build.mjs
+
+      - name: The artifact is a copy of the source, not a build of it
+        run: cmp worker/src/worker.js site/worker.js
+
+      - name: Publish the hash in the log too
+        run: cat site/worker.js.sha256
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

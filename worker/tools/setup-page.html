@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Put your Prowlarr behind a search URL</title>
+<meta name="description" content="Deploy one readable file to a free Cloudflare account and get a search URL and key for your own Prowlarr, without giving any app Prowlarr's key. Nothing to install.">
+<meta name="color-scheme" content="light">
+<style>
+/* Plain, and loaded from nowhere else: no fonts, no scripts, no analytics, no
+   images. Built for a phone first, then allowed to widen. */
+:root {
+  --bg: #ffffff;
+  --ink: #111111;
+  --muted: #666666;
+  --line: #e5e5e5;
+  --soft: #fafafa;
+  --code: #f6f6f6;
+  --accent: #f6821f;      /* Cloudflare orange: the thing to press */
+  /* The same orange at 38% lightness. White on #f6821f measures 2.58:1, which
+     is under WCAG AA's 4.5 for body text and under the relaxed 3 for large
+     text; this is 4.61:1. Same hue and saturation, so it still reads as
+     Cloudflare's orange rather than some other colour. */
+  --accent-deep: #ba5a08;
+  --ok: #17603a;
+  --bad: #a3211a;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+/* `button { display: flex }` below would otherwise beat the browser's own rule
+   for the `hidden` attribute, and "Stop checking" would show before there was
+   anything to stop. */
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  padding: 2rem 1.15rem 6rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 40rem; margin: 0 auto; }
+
+.eyebrow {
+  margin: 0 0 .4rem;
+  font-size: .8rem;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  font-size: clamp(1.65rem, 6vw, 2.1rem);
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  margin: 0 0 .55rem;
+  font-weight: 700;
+}
+h2 {
+  font-size: 1.28rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  margin: 3rem 0 .5rem;
+  font-weight: 650;
+}
+h3 {
+  font-size: 1.02rem;
+  letter-spacing: -0.008em;
+  margin: 1.9rem 0 .35rem;
+  font-weight: 650;
+}
+p { margin: .7rem 0; }
+.lede { color: var(--muted); font-size: 1.06rem; margin: 0 0 1.1rem; }
+.note { color: var(--muted); font-size: .935rem; }
+.note code, p code { color: var(--ink); }
+a { color: var(--ink); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-color: var(--muted); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
+
+/* The way down to the verify section: an ordinary sentence with a link in it. */
+.verify-first { color: var(--ink); font-weight: 550; }
+
+/* ---- the demo -----------------------------------------------------------
+   One sentence with a link in it, not a poster. It is an ordinary link until
+   it is pressed, so the page loads nothing from anywhere else and anyone
+   without JavaScript still gets the video. Pressing it swaps the sentence for
+   the real embed, which is the moment the reader chose YouTube. */
+.demo { margin: 0 0 1.6rem; }
+.video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 1.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+.video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* A picture of Cloudflare's own button, drawn rather than screenshotted: a
+   screenshot would be a third-party image to host, would go stale the next time
+   they restyle the dashboard, and would not scale on a phone.
+
+   Being a good likeness turned out to be the problem. A tester pressed it. So it
+   sits in a dashed frame with a caption saying where it lives, and it does not
+   respond to a cursor or a tap. */
+.shot {
+  margin: .9rem 0 1.1rem;
+  padding: .6rem .8rem .85rem;
+  border: 1px dashed #c9c9c9;
+  border-radius: 10px;
+  background: var(--soft);
+}
+.shot figcaption {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .55rem;
+}
+.mock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .45rem .95rem;
+  border-radius: 6px;
+  background: #0067cc;         /* 5.5:1 with white */
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  white-space: nowrap;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The single point of failure in the whole setup, and the only thing on this
+   page worth reading before pressing rather than after. */
+.wait {
+  background: #fff4e5;
+  border: 1px solid #f0c48a;
+  border-left: 5px solid var(--accent);
+  border-radius: 10px;
+  padding: .85rem .95rem;
+  margin: 0 0 1.2rem;
+}
+.wait p { margin: .35rem 0; }
+.wait-label {
+  margin: 0 0 .35rem !important;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #8a4b00;                /* 6.26:1 on the tint */
+}
+.wait-note { color: #6b4a25; font-size: .93rem; margin-bottom: 0 !important; }
+
+.jump { color: var(--muted); font-size: .93rem; margin: -.2rem 0 2rem; }
+
+/* ---- cards and lists --------------------------------------------------- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 1rem 0;
+  background: var(--bg);
+}
+.card.soft { background: var(--soft); }
+ul.plain { list-style: none; padding: 0; margin: .6rem 0; }
+ul.plain li { position: relative; padding-left: 1.35rem; margin: .5rem 0; }
+ul.plain li::before {
+  content: "";
+  position: absolute; left: .2rem; top: .72em;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--muted);
+}
+ol.plain { padding-left: 1.35rem; margin: .6rem 0; }
+ol.plain li { margin: .5rem 0; }
+
+/* ---- buttons ----------------------------------------------------------- */
+button, a.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  width: 100%;
+  min-height: 3.15rem;
+  padding: .8rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+}
+button.ghost, a.btn.ghost { background: var(--bg); color: var(--ink); border-color: var(--line); }
+button.small { width: auto; min-height: 2.3rem; padding: .35rem .7rem; font-size: .87rem;
+  font-weight: 500; color: var(--muted); margin-top: .55rem; }
+button.ghost:hover, a.btn.ghost:hover { border-color: var(--muted); }
+button:active, a.btn:active { transform: translateY(1px); }
+button[disabled], a.btn[aria-disabled="true"] { opacity: .45; cursor: default; }
+a.btn.deploy { border-color: var(--accent); background: var(--accent); color: #fff; font-size: 1.05rem; }
+.btn-row { display: flex; gap: .5rem; }
+.btn-row > * { width: auto; flex: 1; }
+
+/* ---- the steps --------------------------------------------------------- */
+ol.steps { list-style: none; padding: 0; margin: .5rem 0 0; counter-reset: step; }
+ol.steps > li { border: 1px solid var(--line); border-radius: var(--radius); margin: .6rem 0; overflow: hidden; }
+ol.steps > li.current { border-color: var(--ink); }
+ol.steps > li > details > summary {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .95rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  list-style: none;
+}
+ol.steps > li > details > summary::-webkit-details-marker { display: none; }
+.num {
+  flex: 0 0 auto;
+  width: 1.65rem; height: 1.65rem;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .85rem; font-weight: 600;
+}
+li.current .num { background: var(--ink); border-color: var(--ink); color: #fff; }
+li.done .num { background: var(--bg); border-color: var(--ok); color: var(--ok); }
+.step-title { flex: 1 1 auto; }
+.state { flex: 0 0 auto; font-size: .82rem; font-weight: 600; color: var(--ok); }
+.step-body { padding: 0 1rem 1.1rem; border-top: 1px solid var(--line); }
+.step-body > :first-child { margin-top: .9rem; }
+.step-body h3 { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+
+/* ---- values you copy ---------------------------------------------------- */
+.field { margin: 1rem 0 0; }
+.field label { display: block; font-size: .82rem; font-weight: 650; letter-spacing: .01em; text-transform: uppercase; color: var(--muted); margin-bottom: .3rem; }
+.value {
+  font: 500 1rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .7rem .75rem;
+  user-select: all;
+  -webkit-user-select: all;
+  word-break: normal;
+  overflow-wrap: break-word;
+  min-height: 2.9rem;
+}
+/* The key is the one string on this page people copy by hand. */
+#key { font-size: 1.06rem; letter-spacing: .015em; }
+input[type="text"] {
+  width: 100%;
+  min-height: 3rem;
+  padding: .7rem .75rem;
+  font: 400 1rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+input[type="text"]:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+
+code, kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .9em;
+  background: var(--code);
+  padding: .1em .32em;
+  border-radius: 4px;
+}
+kbd { border: 1px solid var(--line); font-weight: 600; }
+pre {
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .8rem;
+  margin: .7rem 0;
+  max-height: 22rem;
+  overflow: auto;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+pre.out { background: #0f1115; border-color: #0f1115; color: #e6e9ef; }
+.hash { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .76rem; word-break: break-all; color: var(--muted); }
+
+details.more { border-top: 1px solid var(--line); }
+details.more:first-of-type { border-top: 0; }
+details.more > summary { cursor: pointer; font-weight: 600; padding: .85rem 0; letter-spacing: -0.008em; }
+details.more > summary::marker { color: var(--muted); }
+
+.status { min-height: 1.35rem; margin-top: .5rem; font-size: .9rem; font-weight: 600; color: var(--ok); }
+.status.bad { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; font-size: .93rem; margin: .5rem 0; }
+th, td { text-align: left; padding: .55rem .6rem .55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { width: 7.5rem; font-weight: 650; }
+footer { margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .89rem; }
+
+/* Two boxes people paste into, and the one warning that has to be read rather
+   than skipped. This page asks for a key that opens somebody's whole Prowlarr,
+   so the sentence about where that key goes is the loudest thing on it. */
+.field + .field { margin-top: 1.1rem; }
+.hint { color: var(--muted); font-size: .88rem; margin: .35rem 0 0; }
+label .why { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
+</style></head>
+<body>
+<main>
+
+<p class="eyebrow">Prowlarr bridge</p>
+<h1>Put your Prowlarr behind a search URL</h1>
+<p class="lede">
+  Your app gets a URL and a key of its own that can only search. Prowlarr's own
+  key, which opens everything, stays on the server. Cloudflare runs the one file
+  in between, free, and nothing is installed on your computer.
+</p>
+<p class="note">Five short steps. Each one opens Cloudflare in a new tab, so keep this page open.</p>
+
+<ol class="steps" id="steps">
+
+  <li class="step current" id="step-1">
+    <details open>
+      <summary><span class="num">1</span><span class="step-title">Your Prowlarr</span><span class="state"></span></summary>
+      <div class="step-body">
+        <p class="note" style="margin-top:0">
+          Two things, both from the Prowlarr you already run. Nothing is sent
+          anywhere: this page makes no network request at all.
+        </p>
+
+        <div class="field">
+          <label for="prowlarr-url">Prowlarr's URL</label>
+          <input id="prowlarr-url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                 placeholder="https://prowlarr.example.com">
+          <p class="hint">
+            The URL you open Prowlarr at, from the internet. Cloudflare cannot
+            reach a machine on your home network, so a
+            <code>192.168.</code> URL will not work here.
+          </p>
+          <div class="status" id="prowlarr-url-status" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="field">
+          <label for="prowlarr-key">Prowlarr's API key</label>
+          <input id="prowlarr-key" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="32 letters and numbers">
+          <p class="hint">
+            In Prowlarr: <em>Settings</em>, <em>General</em>, <em>Security</em>,
+            <em>API Key</em>.
+          </p>
+          <div class="status" id="prowlarr-key-status" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="wait" style="margin-top:1.3rem">
+          <p class="wait-label">Where that key goes</p>
+          <p><strong>Into the file you are about to deploy, and nowhere else.</strong></p>
+          <p class="wait-note">
+            It is written into your copy of the program here in your browser, and
+            travels inside the deploy link after the <code>#</code>, which
+            browsers never send to a server. It is not saved in this browser and
+            it never reaches this page's own URL. <strong>Do not forward the
+            deploy link to anyone</strong>, and if you would rather the key never
+            touched a link at all, there is a way below.
+          </p>
+        </div>
+
+        <button class="ghost next" data-next="step-2" type="button">Open step 2</button>
+      </div>
+    </details>
+  </li>
+
+  <li class="step" id="step-2">
+    <details>
+      <summary><span class="num">2</span><span class="step-title">Sign in to Cloudflare</span><span class="state"></span></summary>
+      <div class="step-body">
+        <a class="btn deploy" href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">
+          Open Cloudflare and sign in
+        </a>
+        <p class="note">
+          A free account is an email address and a password. No card, no domain.
+          If you already have one, the same link signs you in.
+        </p>
+        <p class="note">
+          <strong>Do this before step 3.</strong> If you are signed out when you
+          press Deploy, Cloudflare shows a login page first and the file does
+          not survive the trip.
+        </p>
+        <button class="ghost next" data-next="step-3" type="button">Open step 3</button>
+      </div>
+    </details>
+  </li>
+
+  <li class="step" id="step-3">
+    <details>
+      <summary><span class="num">3</span><span class="step-title">Deploy it</span><span class="state"></span></summary>
+      <div class="step-body">
+        <!-- A new tab on purpose. This page is holding a key that exists nowhere
+             else yet, and leaving the page before it is deployed loses it. -->
+        <a class="btn deploy" id="open-deploy" href="#" target="_blank" rel="noopener">Deploy to Cloudflare for free</a>
+        <div class="status" id="link-status" role="status" aria-live="polite">fill in step 1 first</div>
+        <p class="note">
+          A new tab opens with the file and your settings already in it. Press
+          <strong>Deploy</strong> there and wait for it to finish. To read the
+          file first, open <em>Code preview</em> on that screen.
+        </p>
+        <p class="note">That link has your Prowlarr key inside it. Do not send it to anyone.</p>
+        <button class="ghost next" data-next="step-4" type="button">Open step 4</button>
+      </div>
+    </details>
+  </li>
+
+  <li class="step" id="step-4">
+    <details>
+      <summary><span class="num">4</span><span class="step-title">Open it and come back</span><span class="state"></span></summary>
+      <div class="step-body">
+        <div class="wait">
+          <p class="wait-label">The one thing that goes wrong</p>
+          <p><strong>New Cloudflare account? Wait about two minutes before you
+          press Visit.</strong></p>
+          <p class="wait-note">Cloudflare is still issuing the certificate for
+          your new name. Press too early and the browser shows a security
+          warning. Nothing is broken.</p>
+        </div>
+        <p>Still on Cloudflare, press the blue button at the top right.</p>
+        <figure class="shot">
+          <figcaption>This is on Cloudflare's page, not here</figcaption>
+          <span class="mock-btn" role="img" aria-label="A blue button labelled Visit">Visit &nearr;</span>
+        </figure>
+        <p>
+          Your new page says <strong>Your bridge is live</strong>. Press
+          <strong>Finish setup</strong> on it. That brings you back here with
+          your URL filled in.
+        </p>
+        <details class="more">
+          <summary>It says the connection is not secure</summary>
+          <p class="note">
+            Normal on a new account: the certificate for your new
+            <code>workers.dev</code> name is not ready yet. Wait a minute and
+            press <em>Visit</em> again. If it keeps happening, open the
+            <em>Domains</em> tab on your Worker, switch on the <em>Preview</em>
+            URL, and press <em>Visit</em> once more.
+          </p>
+          <p class="note" style="margin-bottom:0">
+            Either way, that <em>Domains</em> tab shows your URL at the top.
+            Copy it, press the button below, and paste it in. Your settings are
+            already inside the Worker.
+          </p>
+        </details>
+        <button class="ghost small next" data-next="step-5" type="button">Paste my URL instead</button>
+      </div>
+    </details>
+  </li>
+
+  <li class="step" id="step-5">
+    <details>
+      <summary><span class="num">5</span><span class="step-title">Your URL and key</span><span class="state"></span></summary>
+      <div class="step-body">
+
+        <div class="card soft" id="returned" hidden>
+          <p style="margin:0"><strong>Your URL arrived.</strong> Your key is
+          under it. Copy both somewhere you will still have next week.</p>
+        </div>
+
+        <div class="card soft" id="key-missing" hidden>
+          <p style="margin-top:0"><strong>This browser no longer has the key
+          that went into this bridge.</strong> Saved keys are dropped after a
+          week, and another browser never had it.</p>
+          <p style="margin-bottom:0">It is not lost. Open the Worker in
+          Cloudflare, press <strong>Edit code</strong>, and read the line near
+          the top that starts <code>const BRIDGE_KEY</code>. The key shown below
+          is a new one and belongs to no bridge.</p>
+        </div>
+
+        <div class="field">
+          <label for="url">Your URL</label>
+          <div class="value" id="url-shown" hidden></div>
+          <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                 placeholder="your-worker.your-account.workers.dev">
+          <div class="status" id="url-status" role="status" aria-live="polite"></div>
+          <button class="ghost small" id="edit-url" type="button" hidden>Use a different URL</button>
+        </div>
+
+        <div class="field">
+          <label for="key">Your key <span class="why">for the app, not for Prowlarr</span></label>
+          <div class="value" id="key">making one</div>
+        </div>
+
+        <div class="btn-row" style="margin-top:.9rem">
+          <button id="copy-both" type="button">Copy both</button>
+          <button id="copy-key" class="ghost" type="button">Copy key</button>
+        </div>
+        <div class="status" id="key-status" role="status" aria-live="polite"></div>
+
+        <button class="ghost" id="run-test" type="button" style="margin-top:.6rem">Test your URL and key</button>
+        <button class="ghost small" id="stop-test" type="button" hidden>Stop checking</button>
+        <div class="status" id="test-status" role="status" aria-live="polite"></div>
+        <pre class="out" id="test-output" hidden></pre>
+
+        <details class="more">
+          <summary>Run it from a terminal</summary>
+          <pre><code id="curl">curl -H "X-API-Key: YOUR-KEY" \
+  "https://your-url.workers.dev/api/v1/search?q=big+buck+bunny&amp;limit=5"</code></pre>
+          <button id="copy-curl" class="ghost" type="button">Copy the command</button>
+          <div class="status" id="curl-status" role="status" aria-live="polite"></div>
+        </details>
+
+      </div>
+    </details>
+  </li>
+</ol>
+
+<div class="card">
+  <details class="more">
+    <summary>Keep your Prowlarr key out of the link</summary>
+    <p class="note">
+      The deploy link carries all three settings, which is what makes it one
+      press. If you would rather the Prowlarr key never sat in a URL at all,
+      deploy without it and add it afterwards.
+    </p>
+    <a class="btn ghost" id="open-deploy-nokey" href="#" target="_blank" rel="noopener">Deploy without the Prowlarr key</a>
+    <div class="status" id="nokey-status" role="status" aria-live="polite"></div>
+    <ol class="plain">
+      <li>Press <em>Deploy</em> on the Cloudflare screen that opens, as normal.</li>
+      <li>On your new Worker, open <em>Settings</em>, then <em>Variables and Secrets</em>, then <em>Add</em>.</li>
+      <li>Type <code>PROWLARR_APIKEY</code> as the name, choose <em>Secret</em>, paste your Prowlarr key as the value, and press <em>Deploy</em>.</li>
+      <li>Carry on from step 4.</li>
+    </ol>
+  </details>
+  <details class="more">
+    <summary>The Deploy button did not work</summary>
+    <p class="note">
+      This route works in every browser and ends at the same Worker.
+    </p>
+    <button id="copy-code" type="button">Copy the file</button>
+    <div class="status" id="code-status" role="status" aria-live="polite"></div>
+    <ol class="plain">
+      <li><strong>Make an empty Worker.</strong> At <a href="https://dash.cloudflare.com" rel="noopener">dash.cloudflare.com</a>, find <em>Workers &amp; Pages</em>, which newer accounts call <em>Compute</em>. Then <em>Create</em>, the <em>Workers</em> tab, <em>Start with Hello World</em>. Name it, and press <em>Deploy</em>.</li>
+      <li><strong>Replace the code.</strong> Press <em>Edit code</em>, click inside the editor, select everything with <kbd>Ctrl</kbd>+<kbd>A</kbd> or <kbd>&#8984;</kbd>+<kbd>A</kbd>, paste, and press <em>Deploy</em> again.</li>
+      <li><strong>Carry on from step 4.</strong></li>
+    </ol>
+  </details>
+  <details class="more">
+    <summary>Run it before you deploy it</summary>
+    <p class="note">
+      The same file in Cloudflare's playground: an editor with a live preview
+      beside it, where you can type <code>/healthz</code> and watch it answer
+      before anything reaches your account.
+    </p>
+    <a class="btn ghost" id="open-playground" href="#" target="_blank" rel="noopener">Open the playground</a>
+    <div class="status" id="playground-status" role="status" aria-live="polite"></div>
+  </details>
+</div>
+
+<h2>What you are deploying</h2>
+<p>
+  One file, which Cloudflare runs at a URL of its own. It takes a search from
+  your app, asks your Prowlarr, and hands the list back. Cloudflare calls this
+  a Worker.
+</p>
+<ul class="plain">
+  <li><strong>It only searches.</strong> It has three routes and all of them are read-only. Nothing it can do changes anything in Prowlarr.</li>
+  <li><strong>Prowlarr's key never reaches your app.</strong> That key opens Prowlarr's whole settings page, so anything holding it can add indexers and read your other keys. Your app gets a key that can only search, and you can change it without touching Prowlarr.</li>
+  <li><strong>Nothing runs on your computer.</strong> No app, no extension, no download.</li>
+  <li><strong>There is nothing to bill you for.</strong> The free plan covers 100,000 requests a day, and no card is involved.</li>
+  <li><strong>Nobody else gets your URL.</strong> There is no public copy of this and no list of other people's. The only one that exists is the one you make.</li>
+</ul>
+<p class="jump">
+  Putting a stranger's code in your own account?
+  <a class="verify-first" href="#verify">Check it first</a>.
+</p>
+
+<hr>
+
+<h2 id="verify">Check it before you trust it</h2>
+<ul class="plain">
+  <li><strong>It is one file, and you can read all of it.</strong> No dependencies, no build step, no minifier. About <span id="size">a few tens of KB</span>, version <span id="version">unknown</span>.</li>
+  <li><strong>It is the file this project published.</strong> Its SHA&#8209;256, before your settings are written in, is below. The same file is served from this site at <a id="raw-link" href="worker.js" download>worker.js</a>, and a public GitHub Actions run copied it from <a href="https://github.com/momzv2022-ctrl/prowlarr-bridge/blob/main/worker/src/worker.js" rel="noopener">worker/src/worker.js</a> in the repository. Download it and run <code>shasum -a 256 worker.js</code>.</li>
+  <li><strong>Search the file for <code>fetch(</code>.</strong> There is one, and it goes to the Prowlarr URL you typed. No other host, no telemetry.</li>
+  <li><strong>Nothing you type here leaves your browser.</strong> Your key comes from <code>crypto.getRandomValues</code>, and all three settings go into your copy of the file, inside the deploy link, after the <code>#</code>, which browsers do not send to servers. This page makes no network request at all. Open your browser's network tab and watch.</li>
+  <li><strong>Your Prowlarr key is not saved in this browser.</strong> The search key is, for a week, so this page can pair it with the URL your bridge sends back. The Prowlarr key never is.</li>
+</ul>
+<div class="card">
+  <p class="note" style="margin-top:0">SHA&#8209;256 of the file, before your settings are added</p>
+  <p class="hash" id="sha" style="margin:0">unknown</p>
+</div>
+<details class="more" style="border-top:1px solid var(--line)">
+  <summary>Show me the whole file</summary>
+  <pre><code id="source">loading</code></pre>
+</details>
+
+<h3>How to delete it</h3>
+<p class="note">
+  In Cloudflare, open <em>Workers &amp; Pages</em>, click your Worker, then
+  <em>Settings</em>, then <em>Delete</em>. The URL stops answering at once, and
+  your Prowlarr is untouched.
+</p>
+
+<h3>What it does not do</h3>
+<table>
+  <tr><th>Not a search engine</th><td>Prowlarr does the searching. Which indexers answer, how fast, and what they return is Prowlarr's business and yours.</td></tr>
+  <tr><th>Not anonymity</th><td>Your indexers see the query, Prowlarr sees it, and Cloudflare carries it. No log is kept here, but that is a statement about logging and nothing more.</td></tr>
+  <tr><th>Not a client</th><td>It hosts nothing, stores nothing and transfers no file. It returns names, sizes, swarm counts and links.</td></tr>
+</table>
+
+<h2>Your responsibility, and the licence</h2>
+<p class="note">
+  This searches indexers you configured in software you run. Laws about what you
+  may download differ from country to country, and so do the terms of the sites
+  Prowlarr queries. Complying with both is yours to do.
+</p>
+<p class="note">
+  MIT licence: provided <strong>without warranty of any kind</strong>, and
+  <strong>the authors are not liable</strong> for any claim or damages arising
+  from it or from its use. Nothing on this page is legal advice. You deploy it,
+  you run it, and it is yours.
+</p>
+
+<footer>
+  <p>
+    <a href="https://github.com/momzv2022-ctrl/prowlarr-bridge" rel="noopener">Source and documentation on GitHub</a>
+    &middot; MIT licence
+  </p>
+  <p>There is no public copy of this and no list of other people's. The only URL that exists is the one you make.</p>
+</footer>
+
+</main>
+
+<script>
+// Putting a program into a Cloudflare link. This is worker/tools/playground.js
+// from the repository, inlined here unchanged so there is one implementation
+// rather than two that can drift.
+__PLAYGROUND_LIB__
+</script>
+<script>
+// Everything below runs in your browser and talks to nothing. There is no
+// network request on this page at all: no analytics, no fonts, no beacon. The
+// one request it can make is the test in step 5, and only when you press it,
+// and it goes to the bridge you just deployed.
+(function () {
+  "use strict";
+
+  var SOURCE = __WORKER_SOURCE__;
+  var SHA256 = "__SHA256__";
+  var VERSION = "__VERSION__";
+
+  var byId = function (id) { return document.getElementById(id); };
+
+  /* ---- the key ------------------------------------------------------------
+     24 characters from a 31 letter alphabet is a shade under 119 bits, which is
+     not guessable by anything. The alphabet leaves out 0/O/1/I/l so nobody has
+     to squint at it, and the groups of four are there for the same reason: this
+     is a value people copy by hand more often than they expect to.
+
+     Bytes at or above 248 are thrown away rather than folded with `%`, because
+     256 is not a multiple of 31 and the fold would make the first eight letters
+     of the alphabet turn up about 3% more often than the rest. */
+  var ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+  var CEILING = 256 - (256 % ALPHABET.length); // 248
+  function mintKey() {
+    var out = "";
+    var letters = 0;
+    var scratch = new Uint8Array(32);
+    while (letters < 24) {
+      crypto.getRandomValues(scratch);
+      for (var i = 0; i < scratch.length && letters < 24; i += 1) {
+        if (scratch[i] >= CEILING) continue;
+        if (letters && letters % 4 === 0) out += "-";
+        out += ALPHABET[scratch[i] % ALPHABET.length];
+        letters += 1;
+      }
+    }
+    return out;
+  }
+
+  /* ---- remembering it -----------------------------------------------------
+     The URL half can only come from Cloudflare, so the deployed bridge sends it
+     back as `#url=`. For that to be worth anything this page has to still know
+     the key it minted, which means storing it.
+
+     **Only the search key.** The Prowlarr key is never written here, not for a
+     moment: it opens Prowlarr's settings, this page needs it for exactly as
+     long as it takes to build a link, and a browser is a poor place to leave
+     something like that. Reloading mid-setup therefore means typing it again,
+     which is the right trade.
+
+     A stored key is reused on later visits, so the key on screen is always the
+     key inside the file this page is offering, and a reload can never show a
+     key that opens nothing. Dropped after a week. Losing it is not losing the
+     key: it is on the `const BRIDGE_KEY` line of your own Worker. */
+  var STORE = "prowlarr-bridge.key.v1";
+  var REMEMBER_MS = 7 * 24 * 60 * 60 * 1000;
+
+  function rememberedKey() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (!raw) return null;
+      var saved = JSON.parse(raw);
+      if (!saved || typeof saved.key !== "string" || !saved.at) return null;
+      if (Date.now() - saved.at > REMEMBER_MS) { localStorage.removeItem(STORE); return null; }
+      return saved.key;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function rememberKey(value) {
+    try { localStorage.setItem(STORE, JSON.stringify({ key: value, at: Date.now() })); } catch (error) {}
+  }
+
+  /* The URL the bridge hands back. A fragment, so it reached this page without
+     passing through any server on the way. */
+  function urlFromFragment() {
+    var found = /(?:^|[#&])url=([^&]*)/.exec(location.hash || "");
+    if (!found) return "";
+    var decoded = "";
+    try { decoded = decodeURIComponent(found[1]); } catch (error) { decoded = found[1]; }
+    return cleanUrl(decoded);
+  }
+
+  var returnedUrl = urlFromFragment();
+  var savedKey = rememberedKey();
+  var key = savedKey || mintKey();
+
+  byId("key").textContent = key;
+  byId("version").textContent = VERSION;
+  byId("sha").textContent = SHA256;
+
+  /* The three edits this page makes to the file, anchored to the exact
+     committed text so a file that has drifted fails loudly here rather than
+     deploying with a setting missing. */
+  var EMPTY_KEY = 'const BRIDGE_KEY = "";';
+  var EMPTY_URL = 'const PROWLARR = "";';
+  var EMPTY_PROWLARR_KEY = 'const PROWLARR_KEY = "";';
+  var NO_WINDOW = "const SETUP_UNTIL = 0;";
+  var usable =
+    SOURCE.indexOf(EMPTY_KEY) !== -1 &&
+    SOURCE.indexOf(EMPTY_URL) !== -1 &&
+    SOURCE.indexOf(EMPTY_PROWLARR_KEY) !== -1 &&
+    SOURCE.indexOf(NO_WINDOW) !== -1;
+  if (!usable) {
+    byId("code-status").textContent =
+      "This page could not find the settings lines in the file. Do not use it, and please report this.";
+    byId("copy-code").disabled = true;
+  }
+
+  /* A JavaScript string literal, so a URL or a key with a quote or a backslash
+     in it cannot end the string and become code. Nothing on this page is more
+     important than this function. */
+  function literal(value) {
+    return JSON.stringify(String(value));
+  }
+
+  /**
+   * The file, with this browser's settings written into it.
+   *
+   * Two hours is far longer than a setup takes and far shorter than a habit. It
+   * decides one thing: whether the deployed bridge takes you back here by
+   * itself instead of asking you to press a button that does the same.
+   */
+  function programFor(prowlarrUrl, prowlarrKey) {
+    return SOURCE
+      .replace(EMPTY_KEY, "const BRIDGE_KEY = " + literal(key) + ";")
+      .replace(EMPTY_URL, "const PROWLARR = " + literal(prowlarrUrl) + ";")
+      .replace(EMPTY_PROWLARR_KEY, "const PROWLARR_KEY = " + literal(prowlarrKey) + ";")
+      .replace(NO_WINDOW, "const SETUP_UNTIL = " + (Date.now() + 2 * 60 * 60 * 1000) + ";");
+  }
+
+  byId("source").textContent = SOURCE;
+  byId("size").textContent = Math.round(SOURCE.length / 1024) + " KB";
+  byId("raw-link").href = location.href.replace(/[^/]*$/, "") + "worker.js";
+
+  /* ---- what step 1 asks for ----------------------------------------------- */
+  var prowlarrUrlInput = byId("prowlarr-url");
+  var prowlarrKeyInput = byId("prowlarr-key");
+  var deploy = byId("open-deploy");
+  var deployNoKey = byId("open-deploy-nokey");
+  var playground = byId("open-playground");
+  var linkStatus = byId("link-status");
+
+  /** An origin, or "". Same rule the file itself applies to PROWLARR_URL. */
+  function cleanOrigin(typed) {
+    var text = String(typed || "").trim().replace(/\/+$/, "");
+    if (!/^https?:\/\//i.test(text)) return "";
+    var host = text.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+    if (!/^(?:localhost|[a-z0-9-]+(?:\.[a-z0-9-]+)+)(?::\d{1,5})?$/i.test(host)) return "";
+    return text.replace(/\/(api(\/v1(\/search)?)?)$/i, "").replace(/\/+$/, "");
+  }
+
+  /** True for a URL a Cloudflare Worker has no way of reaching. */
+  function isPrivate(origin) {
+    var host = origin.replace(/^https?:\/\//i, "").replace(/:.*$/, "").toLowerCase();
+    return (
+      host === "localhost" ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+      /\.local$/.test(host)
+    );
+  }
+
+  var linksReady = false;
+
+  /** A Prowlarr key is 32 hex characters. Anything this short is a typo. */
+  function keyLooksWrong(value) {
+    return /\s/.test(value) || value.length < 16;
+  }
+
+  /**
+   * Why the links cannot be built, or "".
+   *
+   * This has to agree with what the two boxes say about themselves. A page that
+   * prints "that is not a key" and then hands over a working Deploy button is
+   * worse than one that prints nothing: it spends somebody's deploy proving the
+   * warning was right.
+   */
+  function settingsProblem() {
+    var origin = cleanOrigin(prowlarrUrlInput.value);
+    var prowlarrKey = prowlarrKeyInput.value.trim();
+    if (!origin || !prowlarrKey) return "fill in step 1 first";
+    if (isPrivate(origin)) return "Cloudflare cannot reach that URL. See step 1.";
+    if (keyLooksWrong(prowlarrKey)) return "That Prowlarr key does not look right. See step 1.";
+    return "";
+  }
+
+  /** Rebuild the three links. Deferred, because compressing is not instant. */
+  var rebuildTimer = null;
+  function rebuildLinks() {
+    if (rebuildTimer) clearTimeout(rebuildTimer);
+    linksReady = false;
+    for (var i = 0, all = [deploy, deployNoKey, playground]; i < all.length; i += 1) {
+      all[i].setAttribute("aria-disabled", "true");
+      all[i].href = "#";
+    }
+    var problem = settingsProblem();
+    if (problem || !usable) {
+      linkStatus.className = "status" + (problem === "fill in step 1 first" ? "" : " bad");
+      linkStatus.textContent = usable ? problem : "This page could not read the file. Please report this.";
+      return;
+    }
+    linkStatus.className = "status";
+    linkStatus.textContent = "building your link";
+    rebuildTimer = setTimeout(function () {
+      try {
+        var origin = cleanOrigin(prowlarrUrlInput.value);
+        var prowlarrKey = prowlarrKeyInput.value.trim();
+        // One compression per destination, and the two that carry the same
+        // program share theirs.
+        var full = bothLinks(programFor(origin, prowlarrKey));
+        deploy.href = full.deploy;
+        playground.href = full.playground;
+        deployNoKey.href = bothLinks(programFor(origin, "")).deploy;
+        for (var i = 0, all = [deploy, deployNoKey, playground]; i < all.length; i += 1) {
+          all[i].removeAttribute("aria-disabled");
+        }
+        linksReady = true;
+        linkStatus.textContent = "";
+        // Chrome, Firefox and Edge take a URL this long without complaint, and
+        // so does Safari: this file is small enough that its link fits inside
+        // Safari's own ceiling, which is around 80,000 characters.
+        if (full.deploy.length > 78000) {
+          linkStatus.className = "status bad";
+          linkStatus.textContent = "That link came out unusually long. If Deploy does nothing, use “The Deploy button did not work” below.";
+        }
+      } catch (error) {
+        linkStatus.className = "status bad";
+        linkStatus.textContent = "Could not build the link. Use “The Deploy button did not work” below.";
+      }
+    }, 60);
+  }
+
+  function checkStepOne() {
+    var origin = cleanOrigin(prowlarrUrlInput.value);
+    var urlStatus = byId("prowlarr-url-status");
+    urlStatus.className = "status";
+    if (!prowlarrUrlInput.value.trim()) urlStatus.textContent = "";
+    else if (!origin) {
+      urlStatus.className = "status bad";
+      urlStatus.textContent = "That does not look like a URL yet. It starts with https://";
+    } else if (isPrivate(origin)) {
+      urlStatus.className = "status bad";
+      urlStatus.textContent = "Cloudflare cannot reach an address on your own network.";
+    } else {
+      urlStatus.textContent = "Looks right.";
+    }
+
+    var prowlarrKey = prowlarrKeyInput.value.trim();
+    var keyStatus = byId("prowlarr-key-status");
+    keyStatus.className = "status";
+    if (!prowlarrKey) keyStatus.textContent = "";
+    else if (keyLooksWrong(prowlarrKey)) {
+      keyStatus.className = "status bad";
+      keyStatus.textContent = "A Prowlarr key is 32 letters and numbers, with no spaces.";
+    } else {
+      keyStatus.textContent = "Looks right.";
+    }
+
+    rebuildLinks();
+    refreshCurl();
+  }
+
+  prowlarrUrlInput.addEventListener("input", checkStepOne);
+  prowlarrKeyInput.addEventListener("input", checkStepOne);
+
+  /* A link that is not ready must not navigate: a `#` href would scroll to the
+     top of the page, which reads exactly like a broken button. */
+  [deploy, deployNoKey, playground].forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      if (link.getAttribute("aria-disabled") === "true") {
+        event.preventDefault();
+        linkStatus.className = "status bad";
+        linkStatus.textContent = settingsProblem() || "Still building your link. Try again in a moment.";
+        return;
+      }
+      // Pressing Deploy is the moment this key stops being hypothetical.
+      rememberKey(key);
+    });
+  });
+
+  /* ---- copying ------------------------------------------------------------
+     The modern API needs a secure context and a real tap, and has both here.
+     The fallback is for older mobile browsers. If even that fails, everything on
+     this page can be selected by hand. */
+  function copy(text, statusId, done) {
+    var status = byId(statusId);
+    function ok() {
+      status.className = "status";
+      status.textContent = done;
+      setTimeout(function () { status.textContent = ""; }, 4000);
+    }
+    function fail() {
+      status.className = "status bad";
+      status.textContent = "Could not copy automatically. Select it by hand.";
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, function () { legacy(text) ? ok() : fail(); });
+      return;
+    }
+    legacy(text) ? ok() : fail();
+  }
+
+  function legacy(text) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.top = "-1000px";
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0, text.length);
+    var worked = false;
+    try { worked = document.execCommand("copy"); } catch (error) { worked = false; }
+    document.body.removeChild(area);
+    return worked;
+  }
+
+  /* ---- the URL your bridge sends back ------------------------------------- */
+  var urlInput = byId("url");
+  var urlShown = byId("url-shown");
+  var editUrl = byId("edit-url");
+  var urlStatus = byId("url-status");
+  var curlBlock = byId("curl");
+
+  function cleanUrl(typed) {
+    // People paste whole URLs, with and without a scheme, with and without a
+    // trailing slash or a path. Take the host and nothing else. A port is
+    // allowed because a bridge behind a proxy, or one running on a machine at
+    // home, has one.
+    //
+    // The pattern is in here rather than in a `var` above, because this runs
+    // while the page is still deciding which key to show, which is before any
+    // `var` in this script has been assigned.
+    var shape = /^(?:localhost|[a-z0-9-]+(?:\.[a-z0-9-]+)+)(?::\d{1,5})?$/i;
+    var text = String(typed || "").trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+    return shape.test(text) ? text : "";
+  }
+
+  // Everything Cloudflare hands out is https. A loopback URL is not, and giving
+  // somebody a command that cannot connect is a poor way to end a setup.
+  function schemeFor(host) {
+    return /^(?:localhost|127\.0\.0\.1|\[::1\])(?::|$)/i.test(host) ? "http" : "https";
+  }
+
+  function origin(host) {
+    return schemeFor(host) + "://" + host;
+  }
+
+  function refreshCurl() {
+    var host = cleanUrl(urlInput.value);
+    curlBlock.textContent =
+      'curl -H "X-API-Key: ' + key + '" \\\n' +
+      '  "' + (host ? origin(host) : "https://your-url.workers.dev") +
+      '/api/v1/search?q=big+buck+bunny&limit=5"';
+  }
+
+  function refreshUrl() {
+    var host = cleanUrl(urlInput.value);
+    refreshCurl();
+    urlStatus.className = "status";
+    if (!urlInput.value.trim()) urlStatus.textContent = "";
+    else if (host) urlStatus.textContent = "Looks right.";
+    else {
+      urlStatus.className = "status bad";
+      urlStatus.textContent = "That does not look like a URL yet.";
+    }
+  }
+
+  urlInput.addEventListener("input", refreshUrl);
+
+  // Reading beats editing, once there is something to read.
+  function showUrlAsText(host) {
+    urlShown.textContent = origin(host);
+    urlShown.hidden = false;
+    urlInput.hidden = true;
+    editUrl.hidden = false;
+    urlStatus.textContent = "";
+  }
+
+  editUrl.addEventListener("click", function () {
+    urlShown.hidden = true;
+    urlInput.hidden = false;
+    editUrl.hidden = true;
+    urlInput.focus();
+  });
+
+  byId("copy-key").addEventListener("click", function () {
+    rememberKey(key);
+    copy(key, "key-status", "Key copied.");
+  });
+  byId("copy-both").addEventListener("click", function () {
+    var host = cleanUrl(urlInput.value);
+    rememberKey(key);
+    copy(
+      "url: " + (host ? origin(host) : "https://your-url.workers.dev") + "\nkey: " + key + "\n",
+      "key-status",
+      host ? "URL and key copied. Save them together." : "Copied, but fill in your URL first.",
+    );
+  });
+  byId("copy-curl").addEventListener("click", function () {
+    copy(curlBlock.textContent, "curl-status", "Command copied.");
+  });
+  byId("copy-code").addEventListener("click", function () {
+    var problem = settingsProblem();
+    if (problem) {
+      byId("code-status").className = "status bad";
+      byId("code-status").textContent = problem;
+      return;
+    }
+    rememberKey(key);
+    copy(
+      programFor(cleanOrigin(prowlarrUrlInput.value), prowlarrKeyInput.value.trim()),
+      "code-status",
+      "Copied. Paste it into your new Worker.",
+    );
+  });
+
+  /* ---- the test -----------------------------------------------------------
+     A real search against the bridge that was just deployed, with the key, and
+     the answer printed. It is the only request this page ever makes, and it
+     goes to the reader's own bridge.
+
+     It works because the artifact trusts exactly one origin without being
+     configured to: this page's. Anything else on the internet asking the same
+     question gets no CORS headers and the browser refuses to show it the
+     answer. */
+  var testButton = byId("run-test");
+  var stopButton = byId("stop-test");
+  var testStatus = byId("test-status");
+  var testOutput = byId("test-output");
+
+  /* A brand new Cloudflare account does not have a certificate for its
+     `workers.dev` name yet, and getting one takes a couple of minutes. During
+     that window every request fails, and it fails in a way a browser reports as
+     a security warning, which is the most alarming thing that can happen to
+     somebody who has just deployed a stranger's code.
+
+     Waiting is unavoidable. Waiting with nothing on screen is not. */
+  var RETRY_MS = 5000;
+  var MAX_TRIES = 36;         // three minutes, then it stops asking
+  var tries = 0;
+  var timer = null;
+
+  function stopChecking() {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    tries = 0;
+    stopButton.hidden = true;
+    testButton.disabled = false;
+  }
+
+  function checkAgainSoon() {
+    tries += 1;
+    if (tries > MAX_TRIES) {
+      testStatus.className = "status bad";
+      testStatus.textContent =
+        "Still nothing after three minutes. On a new account a certificate can take longer than that. " +
+        "Nothing is lost, and your URL and key are the right ones. Press Test again in a while.";
+      stopChecking();
+      return;
+    }
+    stopButton.hidden = false;
+    testButton.disabled = true;
+    testStatus.className = "status";
+    testStatus.textContent =
+      "Not live yet, which is the certificate rather than anything you did. " +
+      "Checking every five seconds. Tried " + tries + (tries === 1 ? " time." : " times.");
+    timer = setTimeout(function () { runTest(); }, RETRY_MS);
+  }
+
+  stopButton.addEventListener("click", function () {
+    stopChecking();
+    testStatus.className = "status";
+    testStatus.textContent = "Stopped. Press Test whenever you want to try again.";
+  });
+
+  function runTest() {
+    var host = cleanUrl(urlInput.value);
+    if (!host) {
+      stopChecking();
+      testStatus.className = "status bad";
+      testStatus.textContent = "Fill in your URL first.";
+      return;
+    }
+    if (!tries) {
+      testStatus.className = "status";
+      testStatus.textContent = "Asking your bridge for Big Buck Bunny";
+      testButton.disabled = true;
+    }
+
+    fetch(origin(host) + "/api/v1/search?q=big+buck+bunny&limit=3", {
+      headers: { "X-API-Key": key },
+    })
+      .then(function (response) {
+        return response.text().then(function (body) {
+          var parsed = null;
+          try { parsed = JSON.parse(body); } catch (error) { parsed = null; }
+          return { status: response.status, parsed: parsed, body: body };
+        });
+      })
+      .then(function (answer) {
+        stopChecking();
+        testOutput.hidden = false;
+        testOutput.textContent = answer.parsed
+          ? JSON.stringify(answer.parsed, null, 2)
+          : answer.body.slice(0, 2000);
+
+        if (answer.status === 200 && answer.parsed) {
+          var found = answer.parsed.count || 0;
+          var engines = (answer.parsed.engines || []).length;
+          testStatus.className = "status";
+          testStatus.textContent =
+            "It works. " + found + (found === 1 ? " result" : " results") +
+            " from " + engines + (engines === 1 ? " indexer" : " indexers") +
+            " in " + (answer.parsed.took_ms || 0) + " ms.";
+          rememberKey(key);
+          return;
+        }
+        testStatus.className = "status bad";
+        if (answer.status === 401 || answer.status === 403) {
+          testStatus.textContent =
+            "Your URL is live, but it refused this key. The key inside that Worker is a different one. " +
+            "Open it in Cloudflare, press Edit code, and read the line starting const BRIDGE_KEY.";
+        } else if (answer.status === 502 && answer.parsed && answer.parsed.detail) {
+          // The bridge is fine and Prowlarr is not. It says which, in a
+          // sentence written for exactly this moment.
+          testStatus.textContent = "Your bridge is live. " + answer.parsed.detail;
+        } else if (answer.status === 503 && answer.parsed && answer.parsed.detail) {
+          testStatus.textContent = answer.parsed.detail;
+        } else if (answer.status === 404) {
+          testStatus.textContent = "Something answered, but it is not this program. Check the URL.";
+        } else {
+          testStatus.textContent = "Your bridge answered " + answer.status + ".";
+        }
+      })
+      // Nothing answered at all. On a new account that is the certificate, not
+      // the URL, so this keeps asking rather than declaring a problem.
+      .catch(function () {
+        testOutput.hidden = true;
+        checkAgainSoon();
+      });
+  }
+
+  testButton.addEventListener("click", function () {
+    stopChecking();
+    runTest();
+  });
+
+  /* ---- the steps ----------------------------------------------------------
+     One open at a time, on purpose. Every step here sends somebody to another
+     tab, and the way that goes wrong is losing your place: you come back, see
+     five open panels, and cannot tell which one you were on. */
+  var steps = [].slice.call(document.querySelectorAll("#steps > li.step"));
+
+  function open(id) {
+    steps.forEach(function (step) {
+      var isTarget = step.id === id;
+      step.querySelector("details").open = isTarget;
+      step.classList.toggle("current", isTarget);
+    });
+  }
+
+  function markDone(step) {
+    step.classList.add("done");
+    step.classList.remove("current");
+    step.querySelector(".state").textContent = "done";
+  }
+
+  steps.forEach(function (step) {
+    var details = step.querySelector("details");
+    details.addEventListener("toggle", function () {
+      if (!details.open) return;
+      steps.forEach(function (other) {
+        if (other !== step) other.querySelector("details").open = false;
+        other.classList.toggle("current", other === step);
+      });
+    });
+    var next = step.querySelector(".next");
+    if (!next) return;
+    next.addEventListener("click", function () {
+      markDone(step);
+      open(next.getAttribute("data-next"));
+      step.nextElementSibling.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  checkStepOne();
+  refreshUrl();
+
+  /* Coming back from your own bridge: skip to the end, where the answer is. */
+  if (returnedUrl) {
+    urlInput.value = returnedUrl;
+    refreshUrl();
+    showUrlAsText(returnedUrl);
+    byId(savedKey ? "returned" : "key-missing").hidden = false;
+    steps.forEach(function (step) {
+      if (step.id !== "step-5") markDone(step);
+    });
+    open("step-5");
+    byId("step-5").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+})();
+</script>
+</body>
+</html>

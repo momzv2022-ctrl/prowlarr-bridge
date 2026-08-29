@@ -1,0 +1,142 @@
+{
+  "query": "big buck bunny",
+  "count": 7,
+  "limit": 50,
+  "offset": 0,
+  "took_ms": 0,
+  "torrents": [
+    {
+      "magnet": "magnet:?xt=urn:btih:CFDPCAWKW4RA5D6ACWMZL7UJAMMK76CV&dn=ubuntu",
+      "infohash": "1146f102cab7220e8fc0159995fe890318aff855",
+      "name": "Ubuntu 24.04.1 LTS Desktop amd64 iso",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/1146f102cab7220e8fc0159995fe890318aff855?t=PINNED",
+      "size_bytes": 5368709120,
+      "files": 1,
+      "category": "software",
+      "seeders": 1200,
+      "leechers": 33,
+      "first_seen": "2024-09-01T09:00:00Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-three.test/x/9",
+      "sources": [
+        "Tracker Three"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:4444444444444444444444444444444444444444&dn=Some%20Game%20Deluxe%20Edition%20v1.2.3%20%5BFitGirl%20Repack%5D&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce",
+      "infohash": "4444444444444444444444444444444444444444",
+      "name": "Some Game Deluxe Edition v1.2.3 [FitGirl Repack]",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/4444444444444444444444444444444444444444?t=PINNED",
+      "size_bytes": 61847529472,
+      "category": "software",
+      "seeders": 700,
+      "leechers": 120,
+      "first_seen": "2025-05-05T05:05:05Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-three.test/x/12",
+      "sources": [
+        "Tracker Three"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny&tr=udp%3A%2F%2Ftracker.example%3A1337%2Fannounce",
+      "infohash": "dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c",
+      "name": "Big Buck Bunny 2008 1080p BluRay x264-GRP [PROPER]",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c?t=PINNED",
+      "size_bytes": 1073741824,
+      "files": 3,
+      "category": "video",
+      "seeders": 512,
+      "leechers": 30,
+      "year": "2008",
+      "resolution": "1080p",
+      "codec": "x264",
+      "source": "bluray",
+      "first_seen": "2018-12-31T23:58:20Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-one.test/torrent/1001",
+      "sources": [
+        "Tracker One",
+        "Tracker Two"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel%20%282010%29%201080p%20BluRay%20x264%20YTS&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce",
+      "infohash": "08ada5a7a6183aae1e09d831df6748d566095a10",
+      "name": "Sintel (2010) 1080p BluRay x264 YTS",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/08ada5a7a6183aae1e09d831df6748d566095a10?t=PINNED",
+      "size_bytes": 734003200,
+      "files": 1,
+      "category": "video",
+      "seeders": 120,
+      "leechers": 8,
+      "year": "2010",
+      "resolution": "1080p",
+      "codec": "x264",
+      "source": "bluray",
+      "first_seen": "2018-12-31T23:55:00Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-one.test/torrent/1002",
+      "sources": [
+        "Tracker One"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:2222222222222222222222222222222222222222&dn=Various%20Artists%20-%20Creative%20Commons%20Sampler%202019%20FLAC&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce",
+      "infohash": "2222222222222222222222222222222222222222",
+      "name": "Various Artists - Creative Commons Sampler 2019 FLAC",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/2222222222222222222222222222222222222222?t=PINNED",
+      "size_bytes": 419430400,
+      "category": "audio",
+      "seeders": 42,
+      "leechers": 2,
+      "year": "2019",
+      "first_seen": "2019-06-06T06:06:06Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-four.test/a/5",
+      "sources": [
+        "Tracker Four"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:3333333333333333333333333333333333333333&dn=The%20Cathedral%20and%20the%20Bazaar%20-%20Eric%20S%20Raymond%20%28epub%29&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce",
+      "infohash": "3333333333333333333333333333333333333333",
+      "name": "The Cathedral and the Bazaar - Eric S Raymond (epub)",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/3333333333333333333333333333333333333333?t=PINNED",
+      "size_bytes": 15728640,
+      "category": "document",
+      "seeders": 9,
+      "leechers": 0,
+      "first_seen": "2020-02-02T02:02:02Z",
+      "scraped_at": "PINNED",
+      "description_url": "https://tracker-four.test/b/6",
+      "sources": [
+        "Tracker Four"
+      ]
+    },
+    {
+      "magnet": "magnet:?xt=urn:btih:1111111111111111111111111111111111111111&dn=Some.Show.S02E05.720p.HDTV.x264&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce",
+      "infohash": "1111111111111111111111111111111111111111",
+      "name": "Some.Show.S02E05.720p.HDTV.x264",
+      "torrent_url": "https://bridge.test/api/v1/torrentfile/1111111111111111111111111111111111111111?t=PINNED",
+      "category": "video",
+      "resolution": "720p",
+      "codec": "x264",
+      "source": "hdtv",
+      "season": "02",
+      "episode": "05",
+      "first_seen": "2024-03-04T10:11:12Z",
+      "scraped_at": "PINNED",
+      "sources": [
+        "Tracker Two"
+      ]
+    }
+  ],
+  "engines": [
+    "Tracker Four",
+    "Tracker One",
+    "Tracker Three",
+    "Tracker Two"
+  ],
+  "unresolved": 1
+}

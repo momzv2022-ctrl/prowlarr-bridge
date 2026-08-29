@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+
+# FUSE leftovers and stranded git locks from editing over a desktop bridge.
+# Not deletable from that side.
+.fuse_hidden*
+_to_delete/
+
+# Built by `node worker/tools/build.mjs` and published by CI to GitHub Pages.
+# The artifact is a copy of worker/src/worker.js, so there is nothing here that
+# is not already in the repository.
+/site/
